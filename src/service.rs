@@ -15,7 +15,12 @@ use service_manager::{
     ServiceUninstallCtx,
 };
 use std::ffi::OsString;
-use std::net::{SocketAddr, TcpListener};
+use std::net::SocketAddr;
+#[cfg(feature = "tcp")]
+use std::net::TcpListener;
+#[cfg(feature = "quic")]
+use std::net::UdpSocket;
+
 use std::path::PathBuf;
 use sysinfo::{Pid, System, SystemExt};
 
@@ -145,7 +150,13 @@ impl ServiceControl for NodeServiceManager {
     }
 
     fn is_port_free(&self, port: u16) -> bool {
-        TcpListener::bind(("127.0.0.1", port)).is_ok()
+        if cfg!(feature = "tcp") {
+            #[cfg(feature = "tcp")]
+            return TcpListener::bind(("127.0.0.1", port)).is_ok();
+        } else {
+            // default to quic
+            UdpSocket::bind(("127.0.0.1", port)).is_ok()
+        }
     }
 
     fn is_service_process_running(&self, pid: u32) -> bool {
@@ -156,7 +167,14 @@ impl ServiceControl for NodeServiceManager {
 
     fn get_available_port(&self) -> Result<u16> {
         let addr: SocketAddr = "127.0.0.1:0".parse().unwrap();
-        Ok(TcpListener::bind(addr)?.local_addr()?.port())
+
+        if cfg!(feature = "tcp") {
+            #[cfg(feature = "tcp")]
+            Ok(TcpListener::bind(addr)?.local_addr()?.port())
+        } else {
+            // default to quic
+            Ok(UdpSocket::bind(addr)?.local_addr()?.port())
+        }
     }
 
     fn install(&self, config: ServiceConfig) -> Result<()> {
