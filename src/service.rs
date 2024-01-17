@@ -151,8 +151,7 @@ impl ServiceControl for NodeServiceManager {
 
     fn is_port_free(&self, port: u16) -> bool {
         if cfg!(feature = "tcp") {
-            #[cfg(feature = "tcp")]
-            return TcpListener::bind(("127.0.0.1", port)).is_ok();
+            TcpListener::bind(("127.0.0.1", port)).is_ok()
         } else {
             // default to quic
             UdpSocket::bind(("127.0.0.1", port)).is_ok()
@@ -169,7 +168,6 @@ impl ServiceControl for NodeServiceManager {
         let addr: SocketAddr = "127.0.0.1:0".parse().unwrap();
 
         if cfg!(feature = "tcp") {
-            #[cfg(feature = "tcp")]
             Ok(TcpListener::bind(addr)?.local_addr()?.port())
         } else {
             // default to quic
